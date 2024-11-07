@@ -50,7 +50,7 @@ fun TodoApp() {
 fun TodoListScreen(navController: NavController, todoList: MutableList<TodoItem>) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Todooooo List") })
+            TopAppBar(title = { Text("Notes List") })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("addTodo") }) {

@@ -97,6 +97,8 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
     var title by remember { mutableStateOf("") }
     var subtitle by remember { mutableStateOf("") }
 
+    val isFormValid = title.length >= 3 && subtitle.length >= 3
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -104,11 +106,18 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            if (title.isNotBlank() && subtitle.isNotBlank()) {
-                                todoList.add(TodoItem(id = todoList.size, title = title, subtitle = subtitle))
+                            if (isFormValid) {
+                                todoList.add(
+                                    TodoItem(
+                                        id = todoList.size,
+                                        title = title,
+                                        subtitle = subtitle
+                                    )
+                                )
                                 navController.popBackStack()
                             }
-                        }) {
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -125,80 +134,100 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
             TextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Todo") }
+                label = { Text("Todo") },
+                isError = title.length < 3
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextField(
                 value = subtitle,
                 onValueChange = { subtitle = it },
-                label = { Text("Details") }
+                label = { Text("Details") },
+                isError = subtitle.length < 3
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                if (title.isNotBlank() && subtitle.isNotBlank()) {
-                    todoList.add(TodoItem(id = todoList.size, title = title, subtitle = subtitle))
-                    navController.popBackStack()
-                }
-            }) {
+            Button(
+                onClick = {
+                    if (isFormValid) {
+                        todoList.add(
+                            TodoItem(
+                                id = todoList.size,
+                                title = title,
+                                subtitle = subtitle
+                            )
+                        )
+                        navController.popBackStack()
+                    }
+                },
+                enabled = isFormValid
+            )
+            {
                 Text("Add Todo")
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditTodoScreen(navController: NavController, todoItem: TodoItem) {
-    var title by remember { mutableStateOf(todoItem.title) }
-    var subtitle by remember { mutableStateOf(todoItem.subtitle) }
-    val snackbarHostState = remember{SnackbarHostState()}
-    val coroutineScope = rememberCoroutineScope()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Todo") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
-        snackbarHost = {SnackbarHost(snackbarHostState)}
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Center
-        ) {
-            TextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Todo") }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            TextField(
-                value = subtitle,
-                onValueChange = { subtitle = it },
-                label = { Text("Details") }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                if (title.isNotBlank() && subtitle.isNotBlank()) {
-                    todoItem.title = title
-                    todoItem.subtitle = subtitle
-                    navController.popBackStack()
-                    coroutineScope.launch{
-                        snackbarHostState.showSnackbar("Ändringar sparade")
-
-                    }
-                }
-            }) {
-                Text("Save Todo")
+            if (!isFormValid) {
+                Text(
+                    text = "Title and/or Subtitle must be at least 3 characters.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
 }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun EditTodoScreen(navController: NavController, todoItem: TodoItem) {
+        var title by remember { mutableStateOf(todoItem.title) }
+        var subtitle by remember { mutableStateOf(todoItem.subtitle) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        val coroutineScope = rememberCoroutineScope()
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Edit Todo") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        //    horizontalAlignment = Alignment.CenterHorizontally,
+          //  verticalArrangement = Arrangement.Center
+            ) {
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Todo") }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = subtitle,
+                    onValueChange = { subtitle = it },
+                    label = { Text("Details") }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = {
+                    if (title.isNotBlank() && subtitle.isNotBlank()) {
+                        todoItem.title = title
+                        todoItem.subtitle = subtitle
+                        navController.popBackStack()
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Ändringar sparade")
+
+                        }
+                    }
+                }) {
+                    Text("Save ")
+                }
+            }
+        }
+    }

@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -26,7 +27,9 @@ data class TodoItem(
     val id: Int,
     var title: String,
     var subtitle: String,
-    val timestamp:String,
+    val createdTimestamp: String,
+    var editedTimestamp: String ? = null,
+    var timestamp:String,
     val check: MutableState<Boolean> = mutableStateOf(false)
 )
 
@@ -68,10 +71,13 @@ fun TodoListScreen(navController: NavController, todoList: MutableList<TodoItem>
                             checked = item.check.value,
                             onCheckedChange = {
                                 item.check.value = !item.check.value
-                        })},
+                        }
+                        )
+                                     },
                     headlineContent = {Text(item.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis) },
+
                     supportingContent = {
                         Text(
                             item.subtitle,
@@ -80,9 +86,15 @@ fun TodoListScreen(navController: NavController, todoList: MutableList<TodoItem>
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Added on: ${item.timestamp}",
+                            text = "Created on: ${item.createdTimestamp}",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        item.editedTimestamp?.let{
+                            Text(
+                                text = "Edited on: $it",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
             },
 
                     trailingContent = {
@@ -116,7 +128,9 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
 
     val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
-    val isFormValid = title.length >= 3 && subtitle.length >= 3
+   // val isFormValid = title.length >= 3 && subtitle.length >= 3
+    val isTitleInvalid = title.length < 3
+    val isSubtitleInvalid = subtitle.length < 3
 
     Scaffold(
         topBar = {
@@ -125,20 +139,9 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            if (isFormValid) {
-                                todoList.add(
-                                    TodoItem(
-                                        id = todoList.size,
-                                        title = title,
-                                        subtitle = subtitle,
-                                        timestamp = timestamp
-                                    )
-                                )
-                                navController.popBackStack()
-                            }
-                            else{
-                                isSaving = true
-                            }
+
+                            navController.popBackStack()
+
                         }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -158,36 +161,40 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Todo") },
-                isError = isSaving && title.length < 3
+                isError = isSaving && isTitleInvalid
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextField(
                 value = subtitle,
                 onValueChange = { subtitle = it },
                 label = { Text("Details") },
-                isError = isSaving && subtitle.length < 3
+                isError = isSaving && isSubtitleInvalid
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (isFormValid) {
+                    if (!isTitleInvalid && !isSubtitleInvalid) {
                         todoList.add(
                             TodoItem(
                                 id = todoList.size,
                                 title = title,
                                 subtitle = subtitle,
+                                createdTimestamp = timestamp,
+                                editedTimestamp = null,
                                 timestamp = timestamp
                             )
                         )
                         navController.popBackStack()
+                    } else{
+                        isSaving = true
                     }
                 },
-                enabled = isFormValid
+                enabled = true
             )
             {
                 Text("Add Todo")
             }
-            if (isSaving && !isFormValid) {
+            if (isSaving && (isTitleInvalid || isSubtitleInvalid)) {
                 Text(
                     text = "Title and/or Subtitle must be at least 3 characters.",
                     color = MaterialTheme.colorScheme.error,
@@ -207,6 +214,8 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
         var isSaving by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val coroutineScope = rememberCoroutineScope()
+        val isTitleInvalid = title.length < 3
+        val isSubtitleInvalid =subtitle.length < 3
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
 
@@ -233,24 +242,27 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
                 TextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Todo") },
-                    isError = isSaving && title.length <3
+                    label = { Text("Title") },
+                    isError = isSaving && isTitleInvalid
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 TextField(
                     value = subtitle,
                     onValueChange = { subtitle = it },
                     label = { Text("Details") },
-                    isError = isSaving && subtitle.length < 3
+                    isError = isSaving && isSubtitleInvalid
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
-                    if (title.isNotBlank() && subtitle.isNotBlank()) {
+                    if (!isTitleInvalid && !isSubtitleInvalid) {
                         todoItem.title = title
                         todoItem.subtitle = subtitle
+                        todoItem.editedTimestamp = timestamp
+                        todoItem.timestamp = timestamp
                         navController.popBackStack()
+
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Ändringar sparade")
+                            snackbarHostState.showSnackbar("Changes Saved")
 
                         }
                     }
@@ -260,7 +272,7 @@ fun AddTodoScreen(navController: NavController, todoList: MutableList<TodoItem>)
                 }) {
                     Text("Save ")
                 }
-                if (isSaving && (title.length <3 || subtitle.length < 3)){
+                if (isSaving && (isTitleInvalid || isSubtitleInvalid)){
                     Text(
                         text = "Title and/or Subtitle must be at least 3 characters.",
                         color = MaterialTheme.colorScheme.error,
